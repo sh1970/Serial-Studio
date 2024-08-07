@@ -30,6 +30,7 @@ Control {
   //
   // Access to properties
   //
+  property alias dtr: _dtr.checked
   property alias port: _portCombo.currentIndex
   property alias baudRate: _baudCombo.currentIndex
   property alias dataBits: _dataCombo.currentIndex
@@ -69,8 +70,8 @@ Control {
       id: layout
       columns: 2
       Layout.fillWidth: true
-      rowSpacing: app.spacing
-      columnSpacing: app.spacing
+      rowSpacing: app.spacing / 2
+      columnSpacing: app.spacing / 2
 
       //
       // COM port selector
@@ -136,6 +137,23 @@ Control {
         onCheckedChanged: {
           if (Cpp_IO_Serial.autoReconnect !== checked)
             Cpp_IO_Serial.autoReconnect = checked
+        }
+      }
+
+      //
+      // DTR Signal
+      //
+      Label {
+        text: qsTr("Send DTR Signal") + ":"
+      } CheckBox {
+        id: _dtr
+        Layout.alignment: Qt.AlignLeft
+        Layout.leftMargin: -app.spacing
+        checked: Cpp_IO_Serial.dtrEnabled
+        palette.base: Cpp_ThemeManager.setupPanelBackground
+        onCheckedChanged: {
+          if (Cpp_IO_Serial.dtrEnabled !== checked)
+            Cpp_IO_Serial.dtrEnabled = checked
         }
       }
 

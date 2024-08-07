@@ -32,7 +32,6 @@ Control {
   //
   property alias tcpPlugins: _tcpPlugins.checked
   property alias language: _langCombo.currentIndex
-  property alias windowShadows: _windowShadows.checked
 
   //
   // Layout
@@ -48,8 +47,8 @@ Control {
     GridLayout {
       columns: 2
       Layout.fillWidth: true
-      rowSpacing: app.spacing
-      columnSpacing: app.spacing
+      rowSpacing: app.spacing / 2
+      columnSpacing: app.spacing / 2
 
       //
       // Language selector
@@ -96,22 +95,6 @@ Control {
         onCheckedChanged: {
           if (checked !== Cpp_Plugins_Bridge.enabled)
             Cpp_Plugins_Bridge.enabled = checked
-        }
-      }
-
-      //
-      // Custom window decorations
-      //
-      Label {
-        text: qsTr("Custom window decorations") + ": "
-      } Switch {
-        id: _windowShadows
-        Layout.leftMargin: -app.spacing
-        Layout.alignment: Qt.AlignLeft
-        checked: Cpp_ThemeManager.customWindowDecorations
-        onCheckedChanged: {
-          if (checked != Cpp_ThemeManager.customWindowDecorations)
-            Cpp_ThemeManager.customWindowDecorations = checked
         }
       }
     }

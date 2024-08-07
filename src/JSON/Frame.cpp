@@ -74,12 +74,12 @@ QVector<JSON::Group> &JSON::Frame::groups()
  */
 bool JSON::Frame::read(const QJsonObject &object)
 {
-  // Rest frame data
+  // Reset frame data
   clear();
 
   // Get title & groups array
-  auto title = object.value("title").toString();
-  auto groups = object.value("groups").toArray();
+  auto title = object.value(QStringLiteral("title")).toString();
+  auto groups = object.value(QStringLiteral("groups")).toArray();
 
   // We need to have a project title and at least one group
   if (!title.isEmpty() && !groups.isEmpty())

@@ -59,7 +59,7 @@ Widgets::MultiPlot::MultiPlot(const int index)
 
   // Configure layout
   m_layout.addWidget(&m_plot);
-  m_layout.setContentsMargins(24, 24, 24, 24);
+  m_layout.setContentsMargins(8, 8, 8, 8);
   setLayout(&m_layout);
 
   // Fit data horizontally
@@ -69,7 +69,7 @@ Widgets::MultiPlot::MultiPlot(const int index)
   // Create curves from datasets
   bool normalize = true;
   auto group = dash->getMultiplot(m_index);
-  StringList colors = theme->widgetColors();
+  QStringList colors = theme->widgetColors();
   m_curves.reserve(group.datasetCount());
   for (int i = 0; i < group.datasetCount(); ++i)
   {
@@ -113,14 +113,10 @@ Widgets::MultiPlot::MultiPlot(const int index)
   m_plot.show();
 
   // React to dashboard events
-  // clang-format off
-    connect(dash, SIGNAL(updated()),
-            this, SLOT(updateData()),
-            Qt::QueuedConnection);
-    connect(dash, SIGNAL(pointsChanged()),
-            this, SLOT(updateRange()),
-            Qt::QueuedConnection);
-  // clang-format on
+  connect(dash, SIGNAL(updated()), this, SLOT(updateData()),
+          Qt::QueuedConnection);
+  connect(dash, SIGNAL(pointsChanged()), this, SLOT(updateRange()),
+          Qt::QueuedConnection);
 }
 
 /**
@@ -200,7 +196,7 @@ void Widgets::MultiPlot::updateRange()
   auto group = UI::Dashboard::instance().getMultiplot(m_index);
   for (int i = 0; i < group.datasetCount(); ++i)
   {
-    m_yData.append(PlotData());
+    m_yData.append(QVector<qreal>());
     m_yData.last().resize(dash->points());
     std::fill(m_yData.last().begin(), m_yData.last().end(), 0.0001);
   }

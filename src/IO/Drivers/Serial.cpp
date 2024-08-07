@@ -35,6 +35,7 @@
  */
 IO::Drivers::Serial::Serial()
   : m_port(Q_NULLPTR)
+  , m_dtrEnabled(true)
   , m_autoReconnect(false)
   , m_lastSerialDeviceIndex(0)
   , m_portIndex(0)
@@ -45,22 +46,18 @@ IO::Drivers::Serial::Serial()
   // Init serial port configuration variables
   setBaudRate(9600);
   disconnectDevice();
-  setDataBits(dataBitsList().indexOf("8"));
-  setStopBits(stopBitsList().indexOf("1"));
+  setDataBits(dataBitsList().indexOf(QStringLiteral("8")));
+  setStopBits(stopBitsList().indexOf(QStringLiteral("1")));
   setParity(parityList().indexOf(tr("None")));
   setFlowControl(flowControlList().indexOf(tr("None")));
 
-  // clang-format off
+  // Build serial devices list and refresh it every second
+  connect(&Misc::TimerEvents::instance(), &Misc::TimerEvents::timeout1Hz, this,
+          &IO::Drivers::Serial::refreshSerialDevices);
 
-    // Build serial devices list and refresh it every second
-    connect(&Misc::TimerEvents::instance(), &Misc::TimerEvents::timeout1Hz,
-            this, &IO::Drivers::Serial::refreshSerialDevices);
-
-    // Update connect button status when user selects a serial device
-    connect(this, &IO::Drivers::Serial::portIndexChanged,
-            this, &IO::Drivers::Serial::configurationChanged);
-
-  // clang-format on
+  // Update connect button status when user selects a serial device
+  connect(this, &IO::Drivers::Serial::portIndexChanged, this,
+          &IO::Drivers::Serial::configurationChanged);
 }
 
 /**
@@ -187,6 +184,9 @@ bool IO::Drivers::Serial::open(const QIODevice::OpenMode mode)
     {
       connect(port(), &QIODevice::readyRead, this,
               &IO::Drivers::Serial::onReadyRead);
+
+      port()->setDataTerminalReady(dtrEnabled());
+
       return true;
     }
   }
@@ -228,6 +228,16 @@ bool IO::Drivers::Serial::autoReconnect() const
 }
 
 /**
+ * Returns @c true if the module shall manually send the DTR
+ * (Data Terminal Ready) signal to the connected device upon opening the
+ * serial port connection.
+ */
+bool IO::Drivers::Serial::dtrEnabled() const
+{
+  return m_dtrEnabled;
+}
+
+/**
  * Returns the index of the current serial device selected by the program.
  */
 quint8 IO::Drivers::Serial::portIndex() const
@@ -237,7 +247,7 @@ quint8 IO::Drivers::Serial::portIndex() const
 
 /**
  * Returns the correspoding index of the parity configuration in relation
- * to the @c StringList returned by the @c parityList() function.
+ * to the @c QStringList returned by the @c parityList() function.
  */
 quint8 IO::Drivers::Serial::parityIndex() const
 {
@@ -246,7 +256,7 @@ quint8 IO::Drivers::Serial::parityIndex() const
 
 /**
  * Returns the correspoding index of the data bits configuration in relation
- * to the @c StringList returned by the @c dataBitsList() function.
+ * to the @c QStringList returned by the @c dataBitsList() function.
  */
 quint8 IO::Drivers::Serial::dataBitsIndex() const
 {
@@ -255,7 +265,7 @@ quint8 IO::Drivers::Serial::dataBitsIndex() const
 
 /**
  * Returns the correspoding index of the stop bits configuration in relation
- * to the @c StringList returned by the @c stopBitsList() function.
+ * to the @c QStringList returned by the @c stopBitsList() function.
  */
 quint8 IO::Drivers::Serial::stopBitsIndex() const
 {
@@ -264,7 +274,7 @@ quint8 IO::Drivers::Serial::stopBitsIndex() const
 
 /**
  * Returns the correspoding index of the flow control config. in relation
- * to the @c StringList returned by the @c flowControlList() function.
+ * to the @c QStringList returned by the @c flowControlList() function.
  */
 quint8 IO::Drivers::Serial::flowControlIndex() const
 {
@@ -279,18 +289,22 @@ quint8 IO::Drivers::Serial::flowControlIndex() const
  *       be "Select Serial Device". This is inteded to make the user interface
  *       a little more friendly.
  */
-StringList IO::Drivers::Serial::portList() const
+QStringList IO::Drivers::Serial::portList() const
 {
-  return m_portList;
+  if (m_portList.count() > 0)
+    return m_portList;
+
+  else
+    return QStringList{tr("Select port")};
 }
 
 /**
  * Returns a list with the available parity configurations.
  * This function can be used with a combo-box to build UIs.
  */
-StringList IO::Drivers::Serial::parityList() const
+QStringList IO::Drivers::Serial::parityList() const
 {
-  StringList list;
+  QStringList list;
   list.append(tr("None"));
   list.append(tr("Even"));
   list.append(tr("Odd"));
@@ -303,7 +317,7 @@ StringList IO::Drivers::Serial::parityList() const
  * Returns a list with the available baud rate configurations.
  * This function can be used with a combo-box to build UIs.
  */
-StringList IO::Drivers::Serial::baudRateList() const
+QStringList IO::Drivers::Serial::baudRateList() const
 {
   return m_baudRateList;
 }
@@ -312,27 +326,27 @@ StringList IO::Drivers::Serial::baudRateList() const
  * Returns a list with the available data bits configurations.
  * This function can be used with a combo-box to build UIs.
  */
-StringList IO::Drivers::Serial::dataBitsList() const
+QStringList IO::Drivers::Serial::dataBitsList() const
 {
-  return StringList{"5", "6", "7", "8"};
+  return QStringList{"5", "6", "7", "8"};
 }
 
 /**
  * Returns a list with the available stop bits configurations.
  * This function can be used with a combo-box to build UIs.
  */
-StringList IO::Drivers::Serial::stopBitsList() const
+QStringList IO::Drivers::Serial::stopBitsList() const
 {
-  return StringList{"1", "1.5", "2"};
+  return QStringList{"1", "1.5", "2"};
 }
 
 /**
  * Returns a list with the available flow control configurations.
  * This function can be used with a combo-box to build UIs.
  */
-StringList IO::Drivers::Serial::flowControlList() const
+QStringList IO::Drivers::Serial::flowControlList() const
 {
-  StringList list;
+  QStringList list;
   list.append(tr("None"));
   list.append("RTS/CTS");
   list.append("XON/XOFF");
@@ -424,6 +438,28 @@ void IO::Drivers::Serial::setBaudRate(const qint32 rate)
 
   // Update user interface
   Q_EMIT baudRateChanged();
+}
+
+/**
+ * Sets the Data Terminal Ready (DTR) signal state.
+ *
+ * This function is called when the DTR checkbox state is changed. It updates
+ * the internal state to reflect whether DTR is enabled or disabled and
+ * communicates this change to the serial port if it is open.
+ *
+ * If the serial port is currently open, the DTR signal is set accordingly.
+ *
+ * This change is also emitted as a signal to notify any connected slots of the
+ * change.
+ */
+void IO::Drivers::Serial::setDtrEnabled(const bool enabled)
+{
+  m_dtrEnabled = enabled;
+
+  if (port() && port()->isOpen())
+    port()->setDataTerminalReady(enabled);
+
+  Q_EMIT dtrEnabledChanged();
 }
 
 /**
@@ -618,14 +654,14 @@ void IO::Drivers::Serial::setFlowControl(const quint8 flowControlIndex)
 }
 
 /**
- * Scans for new serial ports available & generates a StringList with current
+ * Scans for new serial ports available & generates a QStringList with current
  * serial ports.
  */
 void IO::Drivers::Serial::refreshSerialDevices()
 {
   // Create device list, starting with dummy header
   // (for a more friendly UI when no devices are attached)
-  StringList ports;
+  QStringList ports;
   ports.append(tr("Select port"));
 
   // Search for available ports and add them to the lsit
@@ -765,7 +801,7 @@ void IO::Drivers::Serial::writeSettings()
     list.append(baudRateList().at(i));
 
   // Save list to memory
-  m_settings.setValue("IO_DataSource_Serial__BaudRates", list);
+  m_settings.setValue(QStringLiteral("IO_DataSource_Serial__BaudRates"), list);
 }
 
 /**

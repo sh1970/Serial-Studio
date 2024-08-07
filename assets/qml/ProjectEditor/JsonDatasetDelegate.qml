@@ -71,9 +71,11 @@ Widgets.Window {
     x: 0
     columns: 2
     anchors.fill: parent
-    rowSpacing: app.spacing
     columnSpacing: app.spacing
-    anchors.margins: app.spacing * 2
+    anchors.margins: app.spacing
+    rowSpacing: app.spacing / 2
+    anchors.leftMargin: app.spacing * 2
+    anchors.rightMargin: app.spacing * 2
 
     //
     // Dataset title
@@ -201,17 +203,22 @@ Widgets.Window {
     // FFT max frequency
     //
     Label {
-      text: qsTr("FFT Samples:")
+      text: qsTr("FFT Window Size:")
       visible: root.fftSamplesVisible
-    } TextField {
+    } ComboBox {
       id: fftSamples
       Layout.fillWidth: true
       visible: root.fftSamplesVisible
-      text: Cpp_Project_Model.datasetFFTSamples(group, dataset)
-      onTextChanged: Cpp_Project_Model.setDatasetFFTSamples(group, dataset, parseInt(text))
-      validator: IntValidator {
-        bottom: 8
-        top: 40 * 1000
+      model: [8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384]
+      onCurrentValueChanged: Cpp_Project_Model.setDatasetFFTSamples(group, dataset, currentValue)
+
+      property int actualValue: Cpp_Project_Model.datasetFFTSamples(group, dataset)
+      Component.onCompleted: {
+        var index = model.indexOf(actualValue)
+        if (index !== -1)
+          fftSamples.currentIndex = index
+        else
+          fftSamples.currentIndex = 7
       }
     }
 
